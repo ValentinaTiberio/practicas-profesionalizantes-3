@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Auto - Modelo</title>
+<style>
+  table, td, th {
+    border: 1px solid black;
+    border-collapse: collapse;
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+<h3>Auto</h3>
+<table>
+  <tr>
+    <td>Marca</td>
+    <td id="marca">Renault</td>
+  </tr>
+  <tr>
+    <td>Modelo</td>
+    <td id="modelo">Clio</td>
+  </tr>
+  <tr>
+    <td>Año</td>
+    <td id="ano">2005</td>
+  </tr>
+  <tr>
+    <td>Velocidad</td>
+    <td id="velocidad">0 km/h</td>
+  </tr>
+</table>
+<button onclick="acelerar()">Acelerar</button>
+<button onclick="frenar()">Frenar</button>
+
+<script>
+  let velocidad = 0;
+
+  function acelerar() {
+    velocidad += 10;
+    document.getElementById('velocidad').innerText = velocidad + ' km/h';
+  }
+
+  function frenar() {
+    velocidad = Math.max(0, velocidad - 10);
+    document.getElementById('velocidad').innerText = velocidad + ' km/h';
+  }
+</script>
+</body>
+</html>
