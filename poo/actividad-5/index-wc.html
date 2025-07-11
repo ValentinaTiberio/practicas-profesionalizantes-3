@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Prototipo de Aplicación de Figuras</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+<script type="text/javascript">
+
+class ApplicationUI extends HTMLElement {
+  constructor() {
+    super();
+    const shadow = this.attachShadow({ mode: 'open' });
+
+    const style = document.createElement('style');
+    style.textContent = `
+      :host {
+        display: flex;
+        height: 100vh;
+        font-family: Arial, sans-serif;
+      }
+      .sidebar {
+        width: 200px;
+        background-color: #f0f0f0;
+        padding: 20px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-right: 1px solid #ccc;
+      }
+      .sidebar button {
+        padding: 10px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .sidebar input[type="color"] {
+        width: 100%;
+        height: 40px;
+        border: none;
+        cursor: pointer;
+      }
+      .canvas-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background-color: #ffffff;
+        border-right: 1px solid #ccc;
+        padding: 10px;
+      }
+      canvas {
+        border: 1px solid #000;
+        width: 600px;
+        height: 400px;
+        background-color: #eee;
+      }
+      .table-panel {
+        width: 300px;
+        padding: 20px;
+        box-sizing: border-box;
+        background-color: #fafafa;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 8px;
+        border: 1px solid #ccc;
+        text-align: left;
+      }
+      th {
+        background-color: #ddd;
+      }
+      .selected {
+        border: 2px solid green;
+      }
+    `;
+
+    const container = document.createElement('div');
+    container.style.display = 'flex';
+    container.style.flex = '1';
+
+    const sidebar = document.createElement('div');
+    sidebar.className = 'sidebar';
+
+    this.btnRect = document.createElement('button');
+    this.btnRect.textContent = 'Crear rectángulo';
+    this.btnCircle = document.createElement('button');
+    this.btnCircle.textContent = 'Crear círculo';
+    this.btnTriangle = document.createElement('button');
+    this.btnTriangle.textContent = 'Crear triángulo';
+
+    const colorLabel = document.createElement('label');
+    colorLabel.textContent = 'Color:';
+    this.colorInput = document.createElement('input');
+    this.colorInput.type = 'color';
+
+    sidebar.append(this.btnRect, this.btnCircle, this.btnTriangle, colorLabel, this.colorInput);
+
+    const canvasContainer = document.createElement('div');
+    canvasContainer.className = 'canvas-container';
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = 600;
+    this.canvas.height = 400;
+    this.statusText = document.createElement('div');
+    this.statusText.textContent = 'Figura activa seleccionada actual: ninguna';
+    canvasContainer.append(this.canvas, this.statusText);
+
+    const tablePanel = document.createElement('div');
+    tablePanel.className = 'table-panel';
+    this.table = document.createElement('table');
+    const thead = this.table.createTHead();
+    thead.innerHTML = '<tr><th>Tipo</th><th>ID/Nombre</th></tr>';
+    this.tbody = document.createElement('tbody');
+    this.table.appendChild(this.tbody);
+    tablePanel.appendChild(this.table);
+
+    container.append(sidebar, canvasContainer, tablePanel);
+    shadow.append(style, container);
+
+    this.btnRect.onclick = () => this.dispatchEvent(new CustomEvent('createRectangleRequest'));
+    this.btnCircle.onclick = () => this.dispatchEvent(new CustomEvent('createCircleRequest'));
+    this.btnTriangle.onclick = () => this.dispatchEvent(new CustomEvent('createTriangleRequest'));
+  }
+
+  static getDispatchedEvents() {
+    return ['createRectangleRequest', 'createCircleRequest', 'createTriangleRequest'];
+  }
+
+  getDrawingContext2D() {
+    return this.canvas.getContext('2d');
+  }
+
+  getFormData() {
+    return { color: this.colorInput.value };
+  }
+
+  addFigureToTable(tipo, id, onClick) {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${tipo}</td><td>${id}</td>`;
+    row.onclick = () => onClick(row);
+    this.tbody.appendChild(row);
+    return row;
+  }
+
+  setStatus(text) {
+    this.statusText.textContent = 'Figura activa seleccionada actual: ' + text;
+  }
+}
+
+customElements.define('applicationui-wc', ApplicationUI);
+
+class ApplicationModel extends EventTarget {
+  constructor() {
+    super();
+    this.objects = new Map();
+  }
+  addObject(id, object) {
+    this.objects.set(id, object);
+    this.dispatchEvent(new CustomEvent('modelchanged'));
+  }
+  getObject(id) {
+    return this.objects.get(id);
+  }
+  getObjectIterator() {
+    return this.objects.values();
+  }
+}
+
+class Figura {
+  constructor(x, y, color) {
+    this.x = parseInt(x);
+    this.y = parseInt(y);
+    this.color = color;
+  }
+  mover(dx, dy) {
+    this.x += dx;
+    this.y += dy;
+  }
+  draw(ctx) {}
+}
+
+class Rectangle extends Figura {
+  constructor(x, y, w, h, color) {
+    super(x, y, color);
+    this.w = parseInt(w);
+    this.h = parseInt(h);
+  }
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.w, this.h);
+  }
+}
+
+class Circle extends Figura {
+  constructor(x, y, r, color) {
+    super(x, y, color);
+    this.r = parseInt(r);
+  }
+  draw(ctx) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+  }
+}
+
+class Triangle extends Figura {
+  constructor(x, y, lado, color) {
+    super(x, y, color);
+    this.lado = parseInt(lado);
+  }
+  draw(ctx) {
+    const h = Math.sqrt(3) / 2 * this.lado;
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x - this.lado / 2, this.y + h);
+    ctx.lineTo(this.x + this.lado / 2, this.y + h);
+    ctx.closePath();
+    ctx.fillStyle = this.color;
+    ctx.fill();
+  }
+}
+
+class ApplicationController {
+  constructor(view, model) {
+    this.view = view;
+    this.model = model;
+    this.ctx = this.view.getDrawingContext2D();
+    this.activeFigure = null;
+    this.activeRow = null;
+  }
+
+  init() {
+    this.model.addEventListener('modelchanged', () => this.redibujar());
+
+    this.view.addEventListener('createRectangleRequest', () => {
+      const id = prompt('ID:');
+      const w = prompt('Ancho:');
+      const h = prompt('Alto:');
+      const x = prompt('X:');
+      const y = prompt('Y:');
+      const color = this.view.getFormData().color;
+      const fig = new Rectangle(x, y, w, h, color);
+      this.model.addObject(id, fig);
+      const row = this.view.addFigureToTable('R', id, r => this.seleccionarFigura(id, r));
+    });
+
+    this.view.addEventListener('createCircleRequest', () => {
+      const id = prompt('ID:');
+      const r = prompt('Radio:');
+      const x = prompt('X:');
+      const y = prompt('Y:');
+      const color = this.view.getFormData().color;
+      const fig = new Circle(x, y, r, color);
+      this.model.addObject(id, fig);
+      const row = this.view.addFigureToTable('C', id, r => this.seleccionarFigura(id, r));
+    });
+
+    this.view.addEventListener('createTriangleRequest', () => {
+      const id = prompt('ID:');
+      const lado = prompt('Lado:');
+      const x = prompt('X:');
+      const y = prompt('Y:');
+      const color = this.view.getFormData().color;
+      const fig = new Triangle(x, y, lado, color);
+      this.model.addObject(id, fig);
+      const row = this.view.addFigureToTable('T', id, r => this.seleccionarFigura(id, r));
+    });
+
+    window.addEventListener('keydown', e => this.moverFiguraActiva(e));
+  }
+
+  redibujar() {
+    this.ctx.clearRect(0, 0, this.view.canvas.width, this.view.canvas.height);
+    for (const obj of this.model.getObjectIterator()) {
+      obj.draw(this.ctx);
+    }
+  }
+
+  seleccionarFigura(id, row) {
+    if (this.activeRow) this.activeRow.classList.remove('selected');
+    this.activeFigure = this.model.getObject(id);
+    this.activeRow = row;
+    row.classList.add('selected');
+    this.view.setStatus(id);
+  }
+
+  moverFiguraActiva(e) {
+    if (!this.activeFigure) return;
+    const step = 10;
+    switch (e.key) {
+      case 'ArrowUp': this.activeFigure.mover(0, -step); break;
+      case 'ArrowDown': this.activeFigure.mover(0, step); break;
+      case 'ArrowLeft': this.activeFigure.mover(-step, 0); break;
+      case 'ArrowRight': this.activeFigure.mover(step, 0); break;
+    }
+    this.redibujar();
+  }
+}
+
+function main() {
+  const model = new ApplicationModel();
+  const ui = new ApplicationUI();
+  const controller = new ApplicationController(ui, model);
+  controller.init();
+  document.body.appendChild(ui);
+}
+
+window.onload = main;
+</script>
+</body>
+</html>
